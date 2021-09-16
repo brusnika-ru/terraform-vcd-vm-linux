@@ -1,98 +1,128 @@
-data "vcd_edgegateway" "edge1" {
-  name = var.vcd_edge_name
-}
-data "vcd_vapp" "vApp" {
-  name = var.vapp_name
-}
-data "vcd_vapp_vm" "vm" {
-  vapp_name  = data.vcd_vapp.vApp.name
-  name       = var.vm_name
-  depends_on = [vcd_vapp_vm.vm, vcd_vm_internal_disk.vmStorage]
-}
-
-locals {
-  storage = flatten([
-    for storage_key, storage in var.vm_storage : [
-      for type_key, type in storage : {
-        type = "vcd-type-${storage_key}"
-        name = type.mount_name
-        size = type.mount_size
-        bus  = index(keys(var.vm_storage), storage_key) + 1
-        unit = type_key
-      }
-    ]
-  ])
-
-  mounts_group = { for mount in local.storage : mount.name => tonumber(mount.size)... }
-  mounts       = zipmap([for k, v in local.mounts_group : k], [for v in local.mounts_group : sum(v)])
-
-  hot_add = var.vm_cpu != "8" ? true : false
-
-  dnat_port_ssh = random_integer.dynamic_ports.result
-  dnat_orig_ip  = data.vcd_edgegateway.edge1.default_external_network_ip
-
-  ssh_ip   = local.dnat_orig_ip
-  ssh_port = local.dnat_port_ssh
-}
-
 # Рандомный порт для проброса SSH
 resource "random_integer" "dynamic_ports" {
   min = 49152
   max = 65535
 }
 
-# Создание проброса SSH порта во вне
-resource "vcd_nsxv_dnat" "dnat_ssh" {
-  edge_gateway = var.vcd_edge_name
-  network_name = var.ext_net_name
-  network_type = "ext"
+# Создание правила Firewall для проброса SSH
+resource "vcd_nsxv_firewall_rule" "dnat_ssh_firewall" {
+  edge_gateway = var.common.vcd_edge_name
 
-  enabled         = true
-  logging_enabled = true
-  description     = "DNAT rule for SSH ${var.vm_name}"
+  name = "SSH to ${var.name}"
+  
+  source {
+    ip_addresses = ["any"]
+  }
 
-  original_address = local.ssh_ip
-  original_port    = local.ssh_port
+  destination {
+    ip_addresses = [local.ssh_ip]
+  }
 
-  translated_address = var.vm_net[0].ip
-  translated_port    = 22
-  protocol           = "tcp"
+  service {
+    protocol = "tcp"
+    port     = local.ssh_port
+  }
 }
 
 # Создание виртуальной машины
 resource "vcd_vapp_vm" "vm" {
-  vapp_name           = data.vcd_vapp.vApp.name
-  name                = var.vm_name
-  catalog_name        = var.catalog_name
-  template_name       = var.template_name
-  vm_name_in_template = var.vm_name_template
-  memory              = var.vm_memory
-  cpus                = var.vm_cpu
-  cpu_cores           = var.vm_cpu
-
+  vapp_name           = var.vapp
+  name                = var.name
+  catalog_name        = var.common.catalog
+  template_name       = var.common.template_name
+  vm_name_in_template = var.template != "" ? var.template : var.common.vm_name_template
+  memory              = var.ram
+  cpus                = var.cpu
+  cpu_cores           = var.cpu >= 10 ? var.cpu / 2 : var.cpu
+  
   cpu_hot_add_enabled    = local.hot_add
   memory_hot_add_enabled = local.hot_add
 
   prevent_update_power_off = true
 
   dynamic "network" {
-    for_each = var.vm_net
-
+    for_each = var.networks
+    
     content {
       type               = "org"
       name               = network.value["name"]
-      ip                 = network.value["ip"]
-      ip_allocation_mode = "MANUAL"
+      adapter_type       = "VMXNET3"
+      ip_allocation_mode = network.value["ip"] != "" ? "MANUAL" : "POOL"
+      ip                 = network.value["ip"] != "" ? network.value["ip"] : ""
     }
+  }
+
+  # guest_properties = {
+  #   "guest.hostname" = "vm1.host.ru"
+  # }
+
+  customization {
+    force      = false
+    enabled    = true
+    change_sid = true
+
+    # initscript = <<EOF
+    # @echo off
+    # if "%1%" == "precustomization" (
+    # echo Do precustomization tasks
+    # ) else if "%1%" == "postcustomization" (
+    # echo %DATE% %TIME% > C:\vm-is-ready
+    # timeout /t 300
+    # powershell -command "Set-NetConnectionProfile -InterfaceAlias 'Ethernet0 2' -NetworkCategory Private"
+    # )
+    # EOF
   }
 
   metadata = local.mounts
 }
 
+data "vcd_vapp_vm" "vm_ip" {
+  depends_on = [
+    vcd_vapp_vm.vm
+  ]
+
+  vapp_name  = var.vapp
+  name       = var.name
+}
+
+# Создание проброса SSH порта во вне
+resource "vcd_nsxv_dnat" "dnat_ssh" {
+  edge_gateway = var.common.vcd_edge_name
+  network_name = var.common.ext_net_name
+  network_type = "ext"
+
+  enabled         = true
+  logging_enabled = true
+  description     = "DNAT rule for SSH ${var.name}"
+
+  original_address   = local.ssh_ip
+  original_port      = local.ssh_port
+
+  translated_address = var.networks[0].ip != "" ? var.networks[0].ip : data.vcd_vapp_vm.vm_ip.network[0].ip
+  translated_port    = 22
+  protocol           = "tcp"
+
+}
+
+# Пауза после создания машины, 3 минут
+resource "time_sleep" "wait_3_minutes" {
+  depends_on = [
+    vcd_vapp_vm.vm
+  ]
+
+  create_duration = "3m"
+}
+
 # Создание виртуального диска и присоединение к ВМ
 resource "vcd_vm_internal_disk" "vmStorage" {
+  depends_on = [
+    time_sleep.wait_3_minutes, 
+    vcd_nsxv_dnat.dnat_ssh, 
+    vcd_nsxv_firewall_rule.dnat_ssh_firewall
+  ]
+
   for_each = {
-    for disk in local.storage : "${disk.type}.${disk.name}.${disk.unit}" => disk
+    for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
   }
 
   vapp_name       = var.vapp_name
@@ -101,19 +131,19 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   size_in_mb      = (each.value.size * 1024) + 1
   bus_number      = each.value.bus
   unit_number     = each.value.unit
+  iops            = each.value.iops
   storage_profile = each.value.type
-  depends_on      = [vcd_vapp_vm.vm]
 
   connection {
-    type     = "ssh"
-    host     = local.ssh_ip
-    port     = local.ssh_port
-    user     = var.vmuser
-    password = var.vmpassword
+    type        = "ssh"
+    host        = local.ssh_ip
+    port        = local.ssh_port
+    user        = var.common.ssh_user
+    private_key = file(var.common.ssh_key)
   }
 
   provisioner "file" {
-    source      = "files/managedisk.sh"
+    source      = "${path.module}/files/managedisk.sh"
     destination = "/tmp/managedisk.sh"
   }
 
@@ -125,7 +155,7 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   }
 }
 
-# Подключение к ВМ по SSH и выполнение инструкций
+# Запись точек монтирования в /tmp/mounts.txt
 resource "null_resource" "mounts_writer" {
   for_each = local.mounts
 
@@ -137,8 +167,8 @@ resource "null_resource" "mounts_writer" {
     type        = "ssh"
     host        = local.ssh_ip
     port        = local.ssh_port
-    user        = var.vmuser
-    private_key = file(var.ssh_key)
+    user        = var.common.ssh_user
+    private_key = file(var.common.ssh_key)
   }
 
   provisioner "remote-exec" {
@@ -153,6 +183,7 @@ resource "time_sleep" "wait_10_seconds" {
   create_duration = "10s"
 }
 
+# Расширение раздела при изменении размера диска
 resource "null_resource" "storage_extender" {
   triggers = {
     vm_disk_ids = join(",", data.vcd_vapp_vm.vm.internal_disk[*].size_in_mb)
@@ -162,12 +193,12 @@ resource "null_resource" "storage_extender" {
     type        = "ssh"
     host        = local.ssh_ip
     port        = local.ssh_port
-    user        = var.vmuser
-    private_key = file(var.ssh_key)
+    user        = var.common.ssh_user
+    private_key = file(var.common.ssh_key)
   }
 
   provisioner "file" {
-    source      = "files/extenddisk.sh"
+    source      = "${path.module}/files/extenddisk.sh"
     destination = "/tmp/extenddisk.sh"
   }
 
