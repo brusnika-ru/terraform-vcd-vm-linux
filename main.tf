@@ -125,8 +125,8 @@ resource "vcd_vm_internal_disk" "vmStorage" {
     for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
   }
 
-  vapp_name       = var.vapp_name
-  vm_name         = var.vm_name
+  vapp_name       = var.vapp
+  vm_name         = var.name
   bus_type        = "paravirtual"
   size_in_mb      = (each.value.size * 1024) + 1
   bus_number      = each.value.bus
