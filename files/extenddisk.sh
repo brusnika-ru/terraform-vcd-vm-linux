@@ -16,7 +16,7 @@ do
   if [[ "$( lsblk | grep $lname | grep ${lsize}G )" ]]; then
     echo "Nothing to do for ${lname}. Size is OK"
   else
-    _vg=$( ls /dev/mapper/ | grep $lname | awk -F "[- ]+" '{print $1}' )
+    _vg=$( ls /dev/mapper/ | grep $lname | awk -F "-" '{print $1}' )
     lvextend -l+100%FREE /dev/$_vg/$lname -r
   fi
 done < "$MOUNTS"

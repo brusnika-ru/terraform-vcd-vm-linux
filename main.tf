@@ -72,7 +72,7 @@ resource "vcd_vapp_vm" "vm" {
     # EOF
   }
 
-  metadata = local.mounts
+  #metadata = local.mounts
 }
 
 data "vcd_vapp_vm" "vm_ip" {
@@ -217,5 +217,29 @@ resource "null_resource" "storage_extender" {
       "sudo bash /tmp/extenddisk.sh",
       "sudo rm /tmp/mounts.txt"
     ]
+  }
+}
+
+# Пауза после создания машины, 1 минута
+resource "time_sleep" "wait_1_minutes" {
+  depends_on = [
+    vcd_vapp_vm.vm,
+    null_resource.storage_extender
+  ]
+
+  create_duration = "1m"
+}
+
+resource "null_resource" "run_ansible" {
+  depends_on = [
+    time_sleep.wait_1_minutes
+  ]
+
+  triggers = {
+    playbook = filebase64("${var.name}.conf.yml")
+  }
+
+  provisioner "local-exec" {
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.common.ssh_user} -i '${local.ssh_ip},' -e 'ansible_port=${local.ssh_port} ansible_shell_type=powershell vm_name=${var.name} vapp_name=${var.vapp}' --key-file ${var.common.ssh_key} ${var.name}.conf.yml"
   }
 }
