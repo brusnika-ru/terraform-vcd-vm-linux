@@ -170,7 +170,7 @@ resource "null_resource" "mounts_writer" {
   for_each = local.mounts
 
   triggers = {
-    vm_disk_ids = join(",", data.vcd_vapp_vm.vm)disks.internal_disk[*].size_in_mb)
+    vm_disk_ids = join(",", data.vcd_vapp_vm.vm_disks.internal_disk[*].size_in_mb)
   }
 
   connection {
