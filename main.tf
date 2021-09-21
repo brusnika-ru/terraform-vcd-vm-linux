@@ -59,7 +59,6 @@ resource "vcd_vapp_vm" "vm" {
   customization {
     force      = false
     enabled    = true
-    change_sid = true
 
     # initscript = <<EOF
     # @echo off
