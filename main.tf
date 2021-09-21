@@ -155,12 +155,22 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   }
 }
 
+data "vcd_vapp_vm" "vm_disks" {
+  depends_on = [
+    vcd_vapp_vm.vm,
+    vcd_vm_internal_disk.vmStorage
+  ]
+
+  vapp_name  = var.vapp
+  name       = var.name
+}
+
 # Запись точек монтирования в /tmp/mounts.txt
 resource "null_resource" "mounts_writer" {
   for_each = local.mounts
 
   triggers = {
-    vm_disk_ids = join(",", data.vcd_vapp_vm.vm.internal_disk[*].size_in_mb)
+    vm_disk_ids = join(",", data.vcd_vapp_vm.vm)disks.internal_disk[*].size_in_mb)
   }
 
   connection {
@@ -186,7 +196,7 @@ resource "time_sleep" "wait_10_seconds" {
 # Расширение раздела при изменении размера диска
 resource "null_resource" "storage_extender" {
   triggers = {
-    vm_disk_ids = join(",", data.vcd_vapp_vm.vm.internal_disk[*].size_in_mb)
+    vm_disk_ids = join(",", data.vcd_vapp_vm.vm_disks.internal_disk[*].size_in_mb)
   }
 
   connection {
