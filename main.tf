@@ -240,6 +240,6 @@ resource "null_resource" "run_ansible" {
   }
 
   provisioner "local-exec" {
-    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.common.ssh_user} -i '${local.ssh_ip},' -e 'ansible_port=${local.ssh_port} vm_name=${var.name} vapp_name=${var.vapp}' --key-file ${var.common.ssh_key} ${var.name}.conf.yml"
+    command = "ANSIBLE_HOST_KEY_CHECKING=False ansible-playbook -u ${var.common.ssh_user} -i '${local.ssh_ip},' -e 'ansible_port=${local.ssh_port} vm_name=${var.name} vapp_name=${var.vapp} vm_ip=${data.vcd_vapp_vm.vm_ip.network[0].ip}' --key-file ${var.common.ssh_key} ${var.name}.conf.yml"
   }
 }
