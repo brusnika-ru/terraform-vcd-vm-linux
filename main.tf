@@ -1,29 +1,3 @@
-# Рандомный порт для проброса SSH
-resource "random_integer" "dynamic_ports" {
-  min = 49152
-  max = 65535
-}
-
-# Создание правила Firewall для проброса SSH
-resource "vcd_nsxv_firewall_rule" "dnat_ssh_firewall" {
-  edge_gateway = var.common.vcd_edge_name
-
-  name = "SSH to ${var.name}"
-  
-  source {
-    ip_addresses = ["any"]
-  }
-
-  destination {
-    ip_addresses = [local.ssh_ip]
-  }
-
-  service {
-    protocol = "tcp"
-    port     = local.ssh_port
-  }
-}
-
 # Создание виртуальной машины
 resource "vcd_vapp_vm" "vm" {
   vapp_name           = var.vapp
@@ -52,27 +26,10 @@ resource "vcd_vapp_vm" "vm" {
     }
   }
 
-  # guest_properties = {
-  #   "guest.hostname" = "vm1.host.ru"
-  # }
-
   customization {
     force      = false
     enabled    = true
-
-    # initscript = <<EOF
-    # @echo off
-    # if "%1%" == "precustomization" (
-    # echo Do precustomization tasks
-    # ) else if "%1%" == "postcustomization" (
-    # echo %DATE% %TIME% > C:\vm-is-ready
-    # timeout /t 300
-    # powershell -command "Set-NetConnectionProfile -InterfaceAlias 'Ethernet0 2' -NetworkCategory Private"
-    # )
-    # EOF
   }
-
-  #metadata = local.mounts
 }
 
 data "vcd_vapp_vm" "vm_ip" {
@@ -82,25 +39,6 @@ data "vcd_vapp_vm" "vm_ip" {
 
   vapp_name  = var.vapp
   name       = var.name
-}
-
-# Создание проброса SSH порта во вне
-resource "vcd_nsxv_dnat" "dnat_ssh" {
-  edge_gateway = var.common.vcd_edge_name
-  network_name = var.common.ext_net_name
-  network_type = "ext"
-
-  enabled         = true
-  logging_enabled = true
-  description     = "DNAT rule for SSH ${var.name}"
-
-  original_address   = local.ssh_ip
-  original_port      = local.ssh_port
-
-  translated_address = var.networks[0].ip != "" ? var.networks[0].ip : data.vcd_vapp_vm.vm_ip.network[0].ip
-  translated_port    = 22
-  protocol           = "tcp"
-
 }
 
 # Пауза после создания машины, 3 минут
@@ -115,9 +53,7 @@ resource "time_sleep" "wait_3_minutes" {
 # Создание виртуального диска и присоединение к ВМ
 resource "vcd_vm_internal_disk" "vmStorage" {
   depends_on = [
-    time_sleep.wait_3_minutes, 
-    vcd_nsxv_dnat.dnat_ssh, 
-    vcd_nsxv_firewall_rule.dnat_ssh_firewall
+    time_sleep.wait_3_minutes
   ]
 
   for_each = {

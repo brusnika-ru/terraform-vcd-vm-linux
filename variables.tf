@@ -68,10 +68,6 @@ locals {
 
   hot_add = var.cpu != 8 ? true : false
 
-  ssh_ip   = local.dnat_orig_ip
-  ssh_port = local.dnat_port_ssh
-
-  dnat_port_ssh = random_integer.dynamic_ports.result
-  dnat_orig_ip  = "176.53.182.12"
-  
+  ssh_ip   = data.vcd_vapp_vm.vm_ip.network[0].ip
+  ssh_port = 22
 }
