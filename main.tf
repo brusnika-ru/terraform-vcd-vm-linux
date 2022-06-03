@@ -102,6 +102,8 @@ data "vcd_vapp_vm" "vm_disks" {
 
 # Запись точек монтирования в /tmp/mounts.txt
 resource "null_resource" "mounts_writer" {
+  depends_on = [vcd_vm_internal_disk.vmStorage]
+
   for_each = local.mounts
 
   triggers = {
@@ -130,6 +132,10 @@ resource "time_sleep" "wait_10_seconds" {
 
 # Расширение раздела при изменении размера диска
 resource "null_resource" "storage_extender" {
+  depends_on = [vcd_vm_internal_disk.vmStorage]
+
+  count = var.storages == {} ? 0 : 1
+
   triggers = {
     vm_disk_ids = join(",", data.vcd_vapp_vm.vm_disks.internal_disk[*].size_in_mb)
   }

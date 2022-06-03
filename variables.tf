@@ -19,8 +19,8 @@ variable "cpu" {
 }
 
 variable "storages" {
-  description = "Size of disks in GigaBytes and name of mount points"
-  default     =  [{}]
+  description = "Map of polcies with size disks in GigaBytes and name of mount points"
+  default     =  {}
 }
 
 variable "types" {
@@ -48,7 +48,7 @@ locals {
   storages = flatten([
     for storage_key, storage in var.storages : [
       for type_key, type in storage : {
-        type = "vcd-type-${storage_key}"
+        type = storage_key
         name = type.mount_name
         size = type.mount_size
         bus  = index(keys(var.storages), storage_key) + 1
