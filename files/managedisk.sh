@@ -28,7 +28,7 @@ fi
 ((LV_SIZE-=4))
 LV_NAME=$( echo $LV_PATH | awk -F "/" '{print $NF}' )
 
-if [[ "$( lvdisplay -c | grep $LV_NAME )" ]]; then
+if [[ "$( lvdisplay -c | grep -w """$LV_NAME""" )" ]]; then
   lvextend -L+${LV_SIZE}M /dev/vg$BUS/$LV_NAME -r
 else
   lvcreate -n $LV_NAME -L ${LV_SIZE}M vg$BUS
