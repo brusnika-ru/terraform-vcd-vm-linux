@@ -41,19 +41,19 @@ data "vcd_vapp_vm" "vm_ip" {
   name       = var.name
 }
 
-# Пауза после создания машины, 3 минут
-resource "time_sleep" "wait_3_minutes" {
+# Пауза после создания машины
+resource "time_sleep" "wait_after_vm" {
   depends_on = [
     vcd_vapp_vm.vm
   ]
 
-  create_duration = "3m"
+  create_duration = "30s"
 }
 
 # Создание виртуального диска и присоединение к ВМ
 resource "vcd_vm_internal_disk" "vmStorage" {
   depends_on = [
-    time_sleep.wait_3_minutes
+    time_sleep.wait_after_vm
   ]
 
   for_each = {
@@ -125,7 +125,7 @@ resource "null_resource" "mounts_writer" {
   }
 }
 
-resource "time_sleep" "wait_10_seconds" {
+resource "time_sleep" "wait_after_disk" {
   depends_on      = [null_resource.mounts_writer]
   create_duration = "10s"
 }
@@ -162,19 +162,19 @@ resource "null_resource" "storage_extender" {
   }
 }
 
-# Пауза после создания машины, 1 минута
-resource "time_sleep" "wait_1_minutes" {
+# Пауза после создания машины
+resource "time_sleep" "wait_before_ansible" {
   depends_on = [
     vcd_vapp_vm.vm,
     null_resource.storage_extender
   ]
 
-  create_duration = "1m"
+  create_duration = "30s"
 }
 
 resource "null_resource" "run_ansible" {
   depends_on = [
-    time_sleep.wait_1_minutes
+    time_sleep.wait_before_ansible
   ]
 
   triggers = {
