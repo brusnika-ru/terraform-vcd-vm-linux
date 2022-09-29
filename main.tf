@@ -156,8 +156,7 @@ resource "null_resource" "storage_extender" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/extenddisk.sh",
-      "sudo bash /tmp/extenddisk.sh",
-      "sudo rm /tmp/mounts.txt"
+      "sudo bash /tmp/extenddisk.sh"
     ]
   }
 }
