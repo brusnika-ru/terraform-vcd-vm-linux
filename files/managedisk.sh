@@ -33,7 +33,7 @@ if [[ "$( lvdisplay -c | grep -w """$LV_NAME""" )" ]]; then
 else
   lvcreate -n $LV_NAME -L ${LV_SIZE}M vg$BUS
   mkfs.ext4 /dev/vg${BUS}/$LV_NAME
-  mkdir -p /var/$LV_PATH
-  mount /dev/vg${BUS}/$LV_NAME /var/$LV_PATH
-  echo "/dev/vg${BUS}/$LV_NAME    /var/$LV_PATH    ext4    defaults    0    1" | tee -a /etc/fstab
+  mkdir -p /var$LV_PATH
+  mount /dev/vg${BUS}/$LV_NAME /var$LV_PATH
+  echo "/dev/vg${BUS}/$LV_NAME    /var$LV_PATH    ext4    defaults    0    1" | tee -a /etc/fstab
 fi
