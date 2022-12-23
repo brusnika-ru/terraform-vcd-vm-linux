@@ -13,6 +13,11 @@ GREP_PCI=$( grep "SCSI${BUS}" ${DEVICES}/label | awk -F "/" '{print $6}' )
 PCI_PATH="pci-${GREP_PCI}-scsi-0:0:${UNIT}:0"
 GREP_DEV=$( ls -l $DISK_PATH | grep $PCI_PATH | awk -F "/" '{print $NF}' )
 
+if [[ $LV_PATH == "block" ]]; then
+  echo "No need LVM"
+  exit 0
+fi
+
 if [[ ! "$( pvs | grep $GREP_DEV )" ]]; then
   pvcreate /dev/$GREP_DEV
 fi
