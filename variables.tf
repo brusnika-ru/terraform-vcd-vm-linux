@@ -113,7 +113,7 @@ locals {
 
   hot_add = var.cpu != 8 ? true : false
 
-  dnat_ip       = var.edge.external_ip
+  dnat_ip       = length(var.dnat_rules) > 0 ? var.edge.external_ip : ""
   dnat_ext_port = length(var.dnat_rules) > 0 ? var.dnat_rules[0].dnat_ext_port : "" 
 
   ssh_ip   = local.dnat_ip != "" ? local.dnat_ip : data.vcd_vapp_vm.vm_ip.network[0].ip
