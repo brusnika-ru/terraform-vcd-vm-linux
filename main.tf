@@ -41,6 +41,24 @@ data "vcd_vapp_vm" "vm_ip" {
   name       = var.name
 }
 
+module "DNAT" {
+  source = "bitbucket.org/brusnika-it/terraform-vcd-vnat.git?ref=v1.0.6"
+  
+  for_each = {
+    for rule in var.dnat_rules : "${rule.dnat_ext_port}.${rule.dnat_in_port}" => rule
+  }
+
+  vcd_edge_name  = var.edge.vcd_edge_name
+
+  type        = "dnat"
+  description = "DNAT ${each.value.dnat_in_port} / ${var.name}"
+  src_port    = each.value.dnat_ext_port
+  dst_net     = data.vcd_vapp_vm.vm_ip.network[0].ip
+  dst_port    = each.value.dnat_in_port
+  net_name    = var.edge.external_net
+  ext_ip      = var.edge.external_ip
+}
+
 # Пауза после создания машины
 resource "time_sleep" "wait_after_vm" {
   depends_on = [
@@ -174,7 +192,8 @@ resource "time_sleep" "wait_before_ansible" {
 
 resource "null_resource" "run_ansible" {
   depends_on = [
-    time_sleep.wait_before_ansible
+    time_sleep.wait_before_ansible,
+    module.DNAT
   ]
 
   triggers = {

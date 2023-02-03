@@ -1,3 +1,9 @@
+variable "vcd_edge_name" {
+  type        = string
+  description = ""
+  default     = ""
+}
+
 variable "vapp" {
   type        = string
   description = "Name of vApp to deploy VM"
@@ -44,6 +50,45 @@ variable "common" {
   description = "Common variables"
 }
 
+variable "edge" {
+  # type        = map
+  description = "EDGE variables"
+}
+
+variable "dnat_ip" {
+  description = "External IP if DNAT used"
+  default     = ""
+}
+
+variable "dnat_ext_port" {
+  description = "External port if DNAT used"
+  default     = ""
+}
+
+variable "dnat_in_port" {
+  description = "Internal port if DNAT used"
+  default     = "22"
+}
+
+variable "external_net" {
+  description = "External net for DNAT"
+  default     = ""
+}
+
+variable "external_ip" {
+  description = "External IP for DNAT"
+  default     = ""
+}
+
+variable "dnat_rules" {
+  description = "List DNAT rules (optional)"
+  type        = list(object({
+    dnat_ext_port = string
+    dnat_in_port  = string
+  }))
+  default     = []
+}
+
 locals {
   storages = flatten([
     for storage_key, storage in var.storages : [
@@ -68,6 +113,9 @@ locals {
 
   hot_add = var.cpu != 8 ? true : false
 
-  ssh_ip   = data.vcd_vapp_vm.vm_ip.network[0].ip
-  ssh_port = 22
+  dnat_ip       = var.edge.external_ip
+  dnat_ext_port = length(var.dnat_rules) > 0 ? var.dnat_rules[0].dnat_ext_port : "" 
+
+  ssh_ip   = local.dnat_ip != "" ? local.dnat_ip : data.vcd_vapp_vm.vm_ip.network[0].ip
+  ssh_port = local.dnat_ext_port != "" ? local.dnat_ext_port : 22
 }
