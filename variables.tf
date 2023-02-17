@@ -53,6 +53,7 @@ variable "common" {
 variable "edge" {
   # type        = map
   description = "EDGE variables"
+  default     = {}
 }
 
 variable "dnat_ip" {
