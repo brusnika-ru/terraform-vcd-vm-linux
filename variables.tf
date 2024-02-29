@@ -30,9 +30,9 @@ variable "storages" {
 }
 
 variable "types" {
-  type = list(object({
+  description = "List of disk polcies. `type` is policy name, `iops` could `number` or 'auto'. `iops = auto` required `iops_limit`"
+  type        = list(object({
     type = string
-    iops = number
   }))
 }
 
@@ -46,12 +46,10 @@ variable "template" {
 }
 
 variable "common" {
-  # type        = map
   description = "Common variables"
 }
 
 variable "edge" {
-  # type        = map
   description = "EDGE variables"
   default     = {}
 }
@@ -105,7 +103,9 @@ locals {
 
   storages_w_iops = flatten([
     for s in local.storages : [
-      for t in var.types : merge(s,t) if s.type == t.type
+      for t in var.types : merge(s, {
+        iops = can(t.iops) == "number" ? t.iops : min(s.size * 10, t.iops_limit)
+      }) if t.type == s.type
     ]
   ])
 
