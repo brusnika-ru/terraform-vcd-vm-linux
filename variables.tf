@@ -30,10 +30,7 @@ variable "storages" {
 }
 
 variable "types" {
-  type        = list(object({
-    type = string
-  }))
-  description = "List of disk polcies. `type` is policy name, `iops` could `number` or 'auto'. `iops = auto` required `iops_limit`"
+  description = "List of disk polcies. `type` is policy name, `iops` could `number` or 'auto'. `iops = auto` required `iops_limit` and `iops_per_gb`"
 }
 
 variable "networks" {
