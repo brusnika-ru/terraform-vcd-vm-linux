@@ -30,7 +30,7 @@ variable "storages" {
 }
 
 variable "types" {
-  description = "List of disk polcies. `type` is policy name, `iops` could `number` or 'auto'. `iops = auto` required `iops_limit` and `iops_per_gb`"
+  description = "List of disk polcies"
 }
 
 variable "networks" {
@@ -101,7 +101,7 @@ locals {
   storages_w_iops = flatten([
     for s in local.storages : [
       for t in var.types : merge(s, {
-        iops = can(t.iops) == "number" ? t.iops : min(s.size * t.iops_per_gb, t.iops_limit)
+        iops = t.iops >= 0 ? t.iops : min(s.size * t.iops_per_gb, t.iops_limit)
       }) if t.type == s.type
     ]
   ])
