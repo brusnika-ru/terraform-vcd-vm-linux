@@ -42,7 +42,7 @@ data "vcd_vapp_vm" "vm_ip" {
 }
 
 module "DNAT" {
-  source = "bitbucket.org/brusnika-it/terraform-vcd-vnat.git?ref=v1.0.6"
+  source = "github.com/brusnika-ru/terraform-vcd-vnat.git?ref=v1.0.6"
   
   for_each = {
     for rule in var.dnat_rules : "${rule.dnat_ext_port}.${rule.dnat_in_port}" => rule
