@@ -75,14 +75,14 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   ]
 
 
-for_each = {
-  for disk in local.storages_processed : 
-    "bus${disk.bus}-unit${disk.unit}-${replace(disk.name, "/", "_")}" => disk
-}
+#for_each = {
+#  for disk in local.storages_processed : 
+#    "bus${disk.bus}-unit${disk.unit}-${replace(disk.name, "/", "_")}" => disk
+#}
 
-#  for_each = {
-#    for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
-#  }
+  for_each = {
+    for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
+  }
 
   vapp_name       = var.vapp
   vm_name         = var.name
@@ -91,8 +91,8 @@ for_each = {
   bus_number      = each.value.bus
   unit_number     = each.value.unit
   iops            = each.value.iops
-  #storage_profile = each.value.type
-  storage_profile = ""
+  storage_profile = each.value.type
+#  storage_profile = ""
 
   connection {
     type        = "ssh"
