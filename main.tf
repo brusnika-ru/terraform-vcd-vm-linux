@@ -74,9 +74,15 @@ resource "vcd_vm_internal_disk" "vmStorage" {
     time_sleep.wait_after_vm
   ]
 
-  for_each = {
-    for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
-  }
+
+for_each = {
+  for disk in local.storages_processed : 
+    "bus${disk.bus}-unit${disk.unit}-${replace(disk.name, "/", "_")}" => disk
+}
+
+#  for_each = {
+#    for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
+#  }
 
   vapp_name       = var.vapp
   vm_name         = var.name

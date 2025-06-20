@@ -24,9 +24,18 @@ variable "cpu" {
   description = "Count of CPU cores VM"
 }
 
+#variable "storages" {
+#  description = "Map of polcies with size disks in GigaBytes and name of mount points"
+#  default     =  {}
+#}
+
 variable "storages" {
-  description = "Map of polcies with size disks in GigaBytes and name of mount points"
-  default     =  {}
+  description = "Disks configuration (mount points and sizes)"
+  type = map(list(object({
+    mount_name = string
+    mount_size = number
+  })))
+  default = {}
 }
 
 variable "types" {
