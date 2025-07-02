@@ -1,4 +1,5 @@
 #!/bin/bash
+#managedisk.sh
 BUS=1
 UNIT=$2
 LV_PATH=$3
