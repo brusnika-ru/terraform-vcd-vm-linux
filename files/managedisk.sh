@@ -1,6 +1,6 @@
 #!/bin/bash
 #managedisk.sh
-BUS=1
+BUS=$1
 UNIT=$2
 LV_PATH=$3
 LV_SIZE=$4

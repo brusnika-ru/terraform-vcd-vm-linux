@@ -114,7 +114,7 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   provisioner "remote-exec" {
     inline = [
       "chmod +x /tmp/managedisk.sh",
-      "sudo bash /tmp/managedisk.sh ${self.bus_number} ${self.unit_number} ${each.value.name} ${self.size_in_mb}",
+      "sudo bash /tmp/managedisk.sh 1 ${self.unit_number} ${each.value.name} ${self.size_in_mb}",
     ]
   }
 }
