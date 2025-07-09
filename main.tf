@@ -75,10 +75,10 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   ]
 
 
-#for_each = {
-#  for disk in local.storages_processed : 
-#    "bus${disk.bus}-unit${disk.unit}-${replace(disk.name, "/", "_")}" => disk
-#}
+ #for_each = {
+ #  for disk in local.storages_processed : 
+ #    "bus${disk.bus}-unit${disk.unit}-${replace(disk.name, "/", "_")}" => disk
+ #}
 
   for_each = {
     for disk in local.storages_w_iops : "${disk.type}.${disk.name}.${disk.unit}" => disk
