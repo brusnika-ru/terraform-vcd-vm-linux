@@ -92,7 +92,7 @@ resource "vcd_vm_internal_disk" "vmStorage" {
   unit_number     = each.value.unit
   iops            = each.value.iops
   storage_profile = each.value.type
-#  storage_profile = ""
+  #storage_profile = ""
 
   lifecycle {
     ignore_changes = [storage_profile]
